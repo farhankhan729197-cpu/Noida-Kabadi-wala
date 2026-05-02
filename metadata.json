@@ -1,0 +1,6 @@
+{
+  "name": "Noida Kawadiwala & Scrap Dealer",
+  "description": "Professional appliance scrap and recycling service in Delhi NCR. Sell your old ACs, fridges, and electronics easily.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": []
+}

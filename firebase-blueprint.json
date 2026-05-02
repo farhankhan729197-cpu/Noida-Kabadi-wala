@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user profiles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["customer", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Appliance scrap pickup inquiries",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "applianceType": { "type": "string" },
+        "brand": { "type": "string" },
+        "model": { "type": "string" },
+        "condition": { "type": "string" },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "coordinates": { 
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "pickupDate": { "type": "string", "format": "date" },
+        "images": { 
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "status": { 
+          "type": "string", 
+          "enum": ["pending", "picked_up", "done", "rejected"] 
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "applianceType", "address", "pickupDate", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile data"
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "Inquiry",
+      "description": "Appliance inquiries"
+    }
+  }
+}

@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Auth helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Validation Primitives
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      
+      allow create: if isSignedIn() && isOwner(userId) &&
+        incoming().role == 'customer' && // Default role
+        incoming().uid == userId &&
+        incoming().email == request.auth.token.email;
+        
+      allow update: if isSignedIn() && (
+        (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone'])) ||
+        (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['role']))
+      );
+    }
+
+    // --- Inquiries Collection ---
+    match /inquiries/{inquiryId} {
+      allow get: if isSignedIn() && (isOwner(existing().userId) || isAdmin());
+      allow list: if isSignedIn() && (
+        (request.query.limit <= 50 && resource.data.userId == request.auth.uid) || 
+        isAdmin()
+      );
+
+      function isValidInquiry(data) {
+        return data.userId == request.auth.uid &&
+               data.applianceType is string && data.applianceType.size() <= 50 &&
+               data.address is string && data.address.size() <= 500 &&
+               data.status in ['pending', 'picked_up', 'done', 'rejected'] &&
+               data.createdAt == request.time;
+      }
+
+      allow create: if isSignedIn() && 
+        isValidInquiry(incoming()) &&
+        incoming().status == 'pending';
+
+      allow update: if isSignedIn() && (
+        (isOwner(existing().userId) && 
+         existing().status == 'pending' &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['applianceType', 'brand', 'model', 'condition', 'address', 'pickupDate', 'images']) &&
+         incoming().status == 'pending') ||
+        (isAdmin() && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+         incoming().updatedAt == request.time)
+      );
+
+      allow delete: if isAdmin();
+    }
+  }
+}
