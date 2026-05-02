@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../components/AuthContext';
-import { db } from '../../lib/firebase';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, serverTimestamp, limit } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle2, XCircle, Truck, Package, Phone, MapPin, ExternalLink, Filter, ChevronDown, Loader2, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -28,13 +28,16 @@ export default function AdminPage() {
 
     const q = query(
       collection(db, 'inquiries'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setInquiries(docs);
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'inquiries');
     });
 
     return () => unsubscribe();
@@ -48,7 +51,7 @@ export default function AdminPage() {
         updatedAt: serverTimestamp(),
       });
     } catch (err) {
-      console.error(err);
+      handleFirestoreError(err, OperationType.UPDATE, `inquiries/${inquiryId}`);
     } finally {
       setUpdatingId(null);
     }

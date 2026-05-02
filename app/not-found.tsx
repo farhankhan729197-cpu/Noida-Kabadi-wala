@@ -9,7 +9,7 @@ export default function NotFound() {
           <h1 className="text-9xl font-black text-teal-600 font-display">404</h1>
           <h2 className="text-3xl font-bold text-slate-900 uppercase tracking-tight">Page Not Found</h2>
           <p className="text-slate-500 font-medium">
-            The recycling page you are looking for doesn't exist or has been moved to a new location.
+            The recycling page you are looking for doesn&apos;t exist or has been moved to a new location.
           </p>
         </div>
         <div className="pt-4">

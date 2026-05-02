@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -30,19 +30,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          setProfile(userDoc.data());
-        } else {
-          // Create initial profile if it doesn't exist
-          const newProfile = {
-            uid: user.uid,
-            email: user.email,
-            role: 'customer',
-            createdAt: new Date().toISOString(),
-          };
-          await setDoc(doc(db, 'users', user.uid), newProfile);
-          setProfile(newProfile);
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            setProfile(userDoc.data());
+          } else {
+            // Create initial profile if it doesn't exist
+            const newProfile = {
+              uid: user.uid,
+              email: user.email,
+              role: 'customer',
+              createdAt: new Date().toISOString(),
+            };
+            await setDoc(doc(db, 'users', user.uid), newProfile);
+            setProfile(newProfile);
+          }
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
         }
       } else {
         setProfile(null);

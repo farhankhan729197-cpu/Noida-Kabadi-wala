@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '../../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { Loader2, Mail, Lock, User, Phone, ArrowRight } from 'lucide-react';
@@ -25,13 +25,17 @@ export default function SignupPage() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        email: user.email,
-        name: user.displayName || 'User',
-        role: 'customer',
-        createdAt: new Date().toISOString(),
-      });
+      try {
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          name: user.displayName || 'User',
+          role: 'customer',
+          createdAt: new Date().toISOString(),
+        });
+      } catch (firestoreErr) {
+        handleFirestoreError(firestoreErr, OperationType.WRITE, `users/${user.uid}`);
+      }
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message);
@@ -46,14 +50,18 @@ export default function SignupPage() {
     setError('');
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(db, 'users', result.user.uid), {
-        uid: result.user.uid,
-        email: email,
-        name: name,
-        phone: phone,
-        role: 'customer',
-        createdAt: new Date().toISOString(),
-      });
+      try {
+        await setDoc(doc(db, 'users', result.user.uid), {
+          uid: result.user.uid,
+          email: email,
+          name: name,
+          phone: phone,
+          role: 'customer',
+          createdAt: new Date().toISOString(),
+        });
+      } catch (firestoreErr) {
+        handleFirestoreError(firestoreErr, OperationType.WRITE, `users/${result.user.uid}`);
+      }
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message);

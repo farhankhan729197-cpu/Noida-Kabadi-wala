@@ -12,8 +12,10 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return isSignedIn() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isSignedIn() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        request.auth.token.email == 'farhankhan729197@gmail.com'
+      );
     }
     
     function isOwner(userId) {
@@ -53,7 +55,7 @@ service cloud.firestore {
     match /inquiries/{inquiryId} {
       allow get: if isSignedIn() && (isOwner(existing().userId) || isAdmin());
       allow list: if isSignedIn() && (
-        (request.query.limit <= 50 && resource.data.userId == request.auth.uid) || 
+        resource.data.userId == request.auth.uid || 
         isAdmin()
       );
 

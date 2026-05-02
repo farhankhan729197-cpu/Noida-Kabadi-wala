@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../components/AuthContext';
-import { db } from '../../lib/firebase';
-import { collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
+import { collection, query, where, orderBy, onSnapshot, Timestamp, limit } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { Clock, CheckCircle2, XCircle, Package, Truck, ArrowUpRight, Search, MapPin } from 'lucide-react';
 import Link from 'next/link';
@@ -20,13 +20,16 @@ export default function Dashboard() {
     const q = query(
       collection(db, 'inquiries'),
       where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(50)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setInquiries(docs);
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'inquiries');
     });
 
     return () => unsubscribe();

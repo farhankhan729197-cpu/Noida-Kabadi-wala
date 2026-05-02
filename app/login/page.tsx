@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '../../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { motion } from 'motion/react';
 import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
@@ -27,15 +27,25 @@ function LoginContent() {
       const user = result.user;
 
       // Check if profile exists
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (!userDoc.exists()) {
-        await setDoc(doc(db, 'users', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          name: user.displayName || 'User',
-          role: 'customer',
-          createdAt: new Date().toISOString(),
-        });
+      let userDoc;
+      try {
+        userDoc = await getDoc(doc(db, 'users', user.uid));
+      } catch (firestoreErr) {
+        handleFirestoreError(firestoreErr, OperationType.GET, `users/${user.uid}`);
+      }
+
+      if (userDoc && !userDoc.exists()) {
+        try {
+          await setDoc(doc(db, 'users', user.uid), {
+            uid: user.uid,
+            email: user.email,
+            name: user.displayName || 'User',
+            role: 'customer',
+            createdAt: new Date().toISOString(),
+          });
+        } catch (firestoreErr) {
+          handleFirestoreError(firestoreErr, OperationType.WRITE, `users/${user.uid}`);
+        }
       }
       router.push(callback);
     } catch (err: any) {
